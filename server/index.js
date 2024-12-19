@@ -5,11 +5,12 @@ const port = 3042;
 
 app.use(cors());
 app.use(express.json());
-
+// TODO: make it send a signed transaction to the server
+// the server should recover the public key from the signature
 const balances = {
-  "02b654b983afe67313ae778f6575ec219f852b4d32be4efd7bf32923e10e7deaff": 100,
-  "03c39568bc73b045df5ec37089ffdbc3acc36a69fc2f2205c670f15fd102eb403b": 50,
-  "02e759a5984734f293e6e03bb15e3181d9c320cb43e048d02f80155b43d5f5328c": 75,
+  "03a8be986e721caad992b94545d9c660e47553ef2099d4d37518292bd21f350397": 100,
+  "037b6ae538ece6bdc264fd6010a838d88adcabb696fc4bde77a5b2966333a87f5b": 50,
+  "0347942a0c37c25bc72bf5566cd70f711a78d618818f0ee18112d5fd4f67a35edd": 75,
 };
 
 app.get("/balance/:address", (req, res) => {
