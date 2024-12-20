@@ -17,7 +17,9 @@ function Transfer({ address, setBalance, privateKey, setPrivateKey }) {
       alert("Please enter a private key");
       return;
     }
-
+    // create the message hash
+    const message = JSON.stringify({ sender: address, amount: parseInt(sendAmount), recipient });
+    const messageHash = keccak256(utf8ToBytes(message));
 
     try {
       const {
