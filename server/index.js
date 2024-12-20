@@ -41,19 +41,23 @@ app.post("/send", (req, res) => {
     if (expectedHash !== messageHash) {
       return res.status(400).send({ message: "Invalid message hash" });
     }
-  }
 
-  setInitialBalance(sender);
-  setInitialBalance(recipient);
+    setInitialBalance(sender);
+    setInitialBalance(recipient);
 
-  if (balances[sender] < amount) {
-    res.status(400).send({ message: "Not enough funds!" });
-  } else {
-    balances[sender] -= amount;
-    balances[recipient] += amount;
-    res.send({ balance: balances[sender] });
-  }
-});
+    if (balances[sender] < amount) {
+      res.status(400).send({ message: "Not enough funds!" });
+    } else {
+      balances[sender] -= amount;
+      balances[recipient] += amount;
+      res.send({ balance: balances[sender] });
+      }
+    } catch(error) {
+      console.error(error);
+      res.status(500).send({ message: "Internal server error" });
+    }
+  });
+
 
 app.listen(port, () => {
   console.log(`Listening on port ${port}!`);
