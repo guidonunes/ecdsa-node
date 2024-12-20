@@ -35,6 +35,12 @@ app.post("/send", (req, res) => {
     if(keyFromSignature !== sender) {
       return res.status(400).send({ message: "Invalid signature" });
     }
+
+    // Check if the message hash is correct
+    const expectedHash = crypto.createHash("sha256").update(`${sender}${recipient}${amount}`).digest("hex");
+    if (expectedHash !== messageHash) {
+      return res.status(400).send({ message: "Invalid message hash" });
+    }
   }
 
   setInitialBalance(sender);
