@@ -26,7 +26,11 @@ app.get("/balance/:address", (req, res) => {
 });
 
 app.post("/send", (req, res) => {
-  const { sender, recipient, amount } = req.body;
+  const { sender, recipient, amount, signature, messageHash } = req.body;
+
+  try {
+    const keyFromSignature = ec.recoverPubKey(messageHash, signature, signature.recoveryParam).encode("hex");
+  }
 
   setInitialBalance(sender);
   setInitialBalance(recipient);
