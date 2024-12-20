@@ -1,7 +1,13 @@
 const express = require("express");
-const app = express();
 const cors = require("cors");
+const elliptic = require("elliptic");
+const crypto = require("crypto");
+
+
+const app = express();
 const port = 3042;
+const EC = elliptic.ec;
+const ec = new EC("secp256k1");
 
 app.use(cors());
 app.use(express.json());
