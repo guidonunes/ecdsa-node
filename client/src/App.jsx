@@ -25,5 +25,5 @@ function App() {
     </div>
   );
 }
-//Transfer should get a private key to generate a signature
-export default App;
+
+export default App
