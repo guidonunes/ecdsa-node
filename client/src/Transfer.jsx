@@ -17,21 +17,31 @@ function Transfer({ address, setBalance, privateKey, setPrivateKey }) {
       alert("Please enter a private key");
       return;
     }
-    // create the message hash
-    const message = JSON.stringify({ sender: address, amount: parseInt(sendAmount), recipient });
-    const messageHash = keccak256(utf8ToBytes(message));
 
     try {
+      // create the message hash
+      const message = JSON.stringify({ sender: address, amount: parseInt(sendAmount), recipient });
+      const messageHash = keccak256(utf8ToBytes(message));
+
+     //Sign the hash using the private key
+      const signature = secp256k1.sign(messageHash, privateKey);
+
       const {
         data: { balance },
       } = await server.post(`send`, {
         sender: address,
         amount: parseInt(sendAmount),
         recipient,
+        signature: {
+          r: toHex(signature.r),
+          s: toHex(signature.s),
+          recoveryParam: signature.recovery,
+        },
       });
+
       setBalance(balance);
     } catch (ex) {
-      alert(ex.response.data.message);
+      alert(ex.response?.data?.message || "An error occurred");
     }
   }
 
@@ -54,6 +64,16 @@ function Transfer({ address, setBalance, privateKey, setPrivateKey }) {
           placeholder="Type an address, for example: 0x2"
           value={recipient}
           onChange={setValue(setRecipient)}
+        ></input>
+      </label>
+
+      <label>
+        Private Key
+        <input
+          type='password'
+          placeholder="Type in a Private Key"
+          value={privateKey}
+          onChange={(evt) => setPrivateKey(evt.target.value)}
         ></input>
       </label>
 
