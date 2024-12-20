@@ -30,6 +30,11 @@ app.post("/send", (req, res) => {
 
   try {
     const keyFromSignature = ec.recoverPubKey(messageHash, signature, signature.recoveryParam).encode("hex");
+
+    // Check if the key recovered from the signature matches the sender
+    if(keyFromSignature !== sender) {
+      return res.status(400).send({ message: "Invalid signature" });
+    }
   }
 
   setInitialBalance(sender);
