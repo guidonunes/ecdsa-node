@@ -5,17 +5,21 @@ import { toHex } from 'ethereum-cryptography/utils';
 
 
 
-function Wallet({ address, setAddress, balance, setBalance, privateKey, setPrivateKey }) {
+function Wallet({ address, setAddress, balance, setBalance}) {
   async function onChange(evt) {
-    const privateKey = evt.target.value;
-    setPrivateKey(privateKey);
-    const address = toHex(secp256k1.getPublicKey(privateKey));
+    const address = evt.target.value.trim();
     setAddress(address);
+
     if (address) {
-      const {
-        data: { balance },
-      } = await server.get(`balance/${address}`);
-      setBalance(balance);
+      try{
+        const {
+          data: { balance },
+        } = await server.get(`balance/${address}`);
+        setBalance(balance);
+      } catch (error){
+        alert("Failed to get balance");
+        setBalance(0);
+      }
     } else {
       setBalance(0);
     }
@@ -26,13 +30,18 @@ function Wallet({ address, setAddress, balance, setBalance, privateKey, setPriva
       <h1>Your Wallet</h1>
 
       <label>
-        Private Key
-        <input placeholder="Type in a Private Key, for example: 0x1" value={privateKey} onChange={onChange}></input>
+      Public Address
+        <input
+          placeholder="Type in your Public Address"
+          value={address}
+          onChange={onChange}
+        ></input>
       </label>
 
       <div>
-        Address: {address.slice(0, 10)}...
+        Address: {address ? `${address.slice(0, 10)}...` : "No Address Entered"}
       </div>
+
 
       <div className="balance">Balance: {balance}</div>
     </div>
