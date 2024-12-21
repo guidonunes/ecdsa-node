@@ -1,13 +1,12 @@
 import server from "./server";
-import { secp256k1 } from 'ethereum-cryptography/secp256k1';
-import { toHex } from 'ethereum-cryptography/utils';
+
 
 
 
 
 function Wallet({ address, setAddress, balance, setBalance}) {
   async function onChange(evt) {
-    const address = evt.target.value.trim();
+    const address = evt.target.value;
     setAddress(address);
 
     if (address) {
