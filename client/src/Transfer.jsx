@@ -1,8 +1,9 @@
 import { useState } from "react";
 import server from "./server";
-import { secp256k1 } from "ethereum-cryptography/secp256k1";
+import * as secp256k1 from 'secp256k1';
 import { toHex, utf8ToBytes } from "ethereum-cryptography/utils";
 import { keccak256 } from "ethereum-cryptography/keccak";
+import { Buffer } from "buffer"; // Import Buffer
 
 function Transfer({ address, setBalance, privateKey, setPrivateKey }) {
   const [sendAmount, setSendAmount] = useState("");
@@ -20,29 +21,37 @@ function Transfer({ address, setBalance, privateKey, setPrivateKey }) {
 
     try {
       // Concatenate the inputs and hash them
-      const messageHash = keccak256(
-        utf8ToBytes(`${address}${recipient}${sendAmount}`)
-      );
-      console.log("messageHash ->", messageHash);
+      const messageHash = keccak256(utf8ToBytes(`${address}${recipient}${sendAmount}`));
+      const messageHashHex = toHex(messageHash); // Convert to hex string
+      console.log("messageHashHex ->", messageHashHex);
 
-      // Sign the hash using the private key
-      const signature = secp256k1.sign(messageHash, privateKey);
-      console.log("signature ->", signature);
+      // Convert the private key to a Buffer
+      const privateKeyBuffer = Buffer.from(privateKey, 'hex');  // Now works in the browser
 
-      // Directly use the raw signature values
-      const { r, s, recovery } = signature;
+      // Sign the message hash using the private key
+      let signature;
+      try {
+        // The signature object contains r, s, and recovery
+        const { signature: rawSignature, recid } = secp256k1.sign(messageHash, privateKeyBuffer);
+        signature = {
+          r: rawSignature.slice(0, 32),  // 32 bytes for r
+          s: rawSignature.slice(32, 64), // 32 bytes for s
+          recoveryParam: recid,           // Recovery parameter (0 or 1)
+        };
+        console.log("signature ->", signature);
+      } catch (err) {
+        console.error("Error during signature generation:", err);
+        return;
+      }
 
+      // Send the signed transaction
       const {
         data: { balance },
       } = await server.post(`send`, {
         sender: address,
         amount: parseInt(sendAmount, 10),
         recipient,
-        signature: {
-          r,
-          s,
-          recoveryParam: recovery, // No formatting needed
-        },
+        signature,
       });
 
       setBalance(balance);

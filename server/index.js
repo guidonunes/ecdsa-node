@@ -35,14 +35,18 @@ app.get("/balance/:address", (req, res) => {
 app.post("/send", (req, res) => {
   const { sender, recipient, amount, signature } = req.body;
 
+  console.log("Received transaction data:", req.body); // Log the received data
+
   try {
     if (!balances[sender] || !balances[recipient]) {
+      console.log("Invalid sender or recipient address.");
       return res.status(400).send({ message: "Invalid sender or recipient address." });
     }
 
     const messageHash = keccak256(
       Buffer.from(`${sender}${recipient}${amount}`)
     ).digest();
+    console.log("Generated messageHash:", messageHash);
 
     // Recover public key from the signature
     const recoveredKey = ec.recoverPubKey(
@@ -53,18 +57,22 @@ app.post("/send", (req, res) => {
       },
       signature.recoveryParam
     );
+    console.log("Recovered public key:", recoveredKey);
 
     // Convert recovered public key to an address
     const recoveredAddress = `0x${keccak256(Buffer.from(recoveredKey.encode("hex"), "hex"))
       .toString("hex")
       .slice(-40)}`;
+    console.log("Recovered address:", recoveredAddress);
 
     if (recoveredAddress !== sender) {
+      console.log("Invalid signature.");
       return res.status(400).send({ message: "Invalid signature." });
     }
 
     // Check if sender has enough balance
     if (balances[sender] < amount) {
+      console.log("Insufficient funds!");
       return res.status(400).send({ message: "Insufficient funds!" });
     }
 
@@ -72,9 +80,10 @@ app.post("/send", (req, res) => {
     balances[sender] -= parseInt(amount, 10);
     balances[recipient] += parseInt(amount, 10);
 
+    console.log("Transaction successful!");
     res.send({ balance: balances[sender] });
   } catch (err) {
-    console.error(err);
+    console.error("Error during transaction:", err);
     res.status(500).send({ message: "Internal server error." });
   }
 });
