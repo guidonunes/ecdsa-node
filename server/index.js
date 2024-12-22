@@ -2,6 +2,7 @@ const express = require("express");
 const cors = require("cors");
 const elliptic = require("elliptic");
 const crypto = require("crypto");
+const keccak256 = require("keccak");
 
 
 const app = express();
@@ -32,43 +33,49 @@ app.get("/balance/:address", (req, res) => {
 });
 
 app.post("/send", (req, res) => {
-  const { sender, recipient, amount, signature, messageHash } = req.body;
+  const { sender, recipient, amount, signature } = req.body;
 
   try {
-    // Check if sender and recipient are among the predefined accounts
     if (!balances[sender] || !balances[recipient]) {
       return res.status(400).send({ message: "Invalid sender or recipient address." });
     }
 
+    const messageHash = keccak256(
+      Buffer.from(`${sender}${recipient}${amount}`)
+    ).digest();
+
     // Recover public key from the signature
-    const keyFromSignature = ec.recoverPubKey(messageHash, signature, signature.recoveryParam);
-    const recoveredAddress = keyFromSignature.encode("hex");
+    const recoveredKey = ec.recoverPubKey(
+      messageHash,
+      {
+        r: signature.r,
+        s: signature.s,
+      },
+      signature.recoveryParam
+    );
 
-    // Check if the key recovered from the signature matches the sender
+    // Convert recovered public key to an address
+    const recoveredAddress = `0x${keccak256(Buffer.from(recoveredKey.encode("hex"), "hex"))
+      .toString("hex")
+      .slice(-40)}`;
+
     if (recoveredAddress !== sender) {
-      return res.status(400).send({ message: "Invalid signature" });
+      return res.status(400).send({ message: "Invalid signature." });
     }
 
-    // Check if the message hash is correct
-    const expectedHash = crypto.createHash("sha256").update(`${sender}${recipient}${amount}`).digest("hex");
-    if (expectedHash !== messageHash) {
-      return res.status(400).send({ message: "Invalid message hash" });
-    }
-
-    // Ensure the sender has enough balance
+    // Check if sender has enough balance
     if (balances[sender] < amount) {
-      return res.status(400).send({ message: "Not enough funds!" });
+      return res.status(400).send({ message: "Insufficient funds!" });
     }
 
-    // Perform the transfer
-    balances[sender] -= amount;
-    balances[recipient] += amount;
+    // Transfer funds
+    balances[sender] -= parseInt(amount, 10);
+    balances[recipient] += parseInt(amount, 10);
 
     res.send({ balance: balances[sender] });
-
-  } catch (error) {
-    console.error(error);
-    res.status(500).send({ message: "Internal server error" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).send({ message: "Internal server error." });
   }
 });
 

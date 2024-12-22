@@ -1,8 +1,8 @@
 import { useState } from "react";
 import server from "./server";
-import { secp256k1 } from 'ethereum-cryptography/secp256k1';
-import { toHex, utf8ToBytes } from 'ethereum-cryptography/utils';
-import { keccak256 } from 'ethereum-cryptography/keccak';
+import { secp256k1 } from "ethereum-cryptography/secp256k1";
+import { toHex, utf8ToBytes } from "ethereum-cryptography/utils";
+import { keccak256 } from "ethereum-cryptography/keccak";
 
 function Transfer({ address, setBalance, privateKey, setPrivateKey }) {
   const [sendAmount, setSendAmount] = useState("");
@@ -13,35 +13,48 @@ function Transfer({ address, setBalance, privateKey, setPrivateKey }) {
   async function transfer(evt) {
     evt.preventDefault();
 
-    if(!privateKey) {
+    if (!privateKey) {
       alert("Please enter a private key");
       return;
     }
 
     try {
-      // create the message hash
-      const message = JSON.stringify({ sender: address, amount: parseInt(sendAmount), recipient });
-      const messageHash = keccak256(utf8ToBytes(message));
+      // Concatenate the inputs and hash them
+      const messageHash = keccak256(
+        utf8ToBytes(`${address}${recipient}${sendAmount}`)
+      );
+      console.log("messageHash ->", messageHash);
 
-     //Sign the hash using the private key
+      // Sign the hash using the private key
       const signature = secp256k1.sign(messageHash, privateKey);
+      console.log("signature ->", signature);
+
+      // Directly use the raw signature values
+      const { r, s, recovery } = signature;
 
       const {
         data: { balance },
       } = await server.post(`send`, {
         sender: address,
-        amount: parseInt(sendAmount),
+        amount: parseInt(sendAmount, 10),
         recipient,
         signature: {
-          r: toHex(signature.r),
-          s: toHex(signature.s),
-          recoveryParam: signature.recovery,
+          r,
+          s,
+          recoveryParam: recovery, // No formatting needed
         },
       });
 
       setBalance(balance);
     } catch (ex) {
-      alert(ex.response?.data?.message || "An error occurred");
+      console.error("Error during transfer:", ex);
+      if (ex.response) {
+        console.error("Response error:", ex.response);
+        alert(ex.response.data.message || "An error occurred");
+      } else {
+        console.error("Unexpected error:", ex);
+        alert("An unexpected error occurred");
+      }
     }
   }
 
@@ -70,7 +83,7 @@ function Transfer({ address, setBalance, privateKey, setPrivateKey }) {
       <label>
         Private Key
         <input
-          type='password'
+          type="password"
           placeholder="Type in a Private Key"
           value={privateKey}
           onChange={(evt) => setPrivateKey(evt.target.value)}
