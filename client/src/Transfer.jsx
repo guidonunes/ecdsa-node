@@ -1,8 +1,8 @@
 import { useState } from "react";
 import server from "./server";
-import * as secp256k1 from 'secp256k1';
 import { toHex, utf8ToBytes } from "ethereum-cryptography/utils";
 import { keccak256 } from "ethereum-cryptography/keccak";
+import { secp256k1 } from "ethereum-cryptography/secp256k1"; // Correct way to import secp256k1
 import { Buffer } from "buffer"; // Import Buffer
 
 function Transfer({ address, setBalance, privateKey, setPrivateKey }) {
@@ -31,18 +31,22 @@ function Transfer({ address, setBalance, privateKey, setPrivateKey }) {
       // Sign the message hash using the private key
       let signature;
       try {
-        // The signature object contains r, s, and recovery
-        const { signature: rawSignature, recid } = secp256k1.sign(messageHash, privateKeyBuffer);
-        signature = {
-          r: rawSignature.slice(0, 32),  // 32 bytes for r
-          s: rawSignature.slice(32, 64), // 32 bytes for s
-          recoveryParam: recid,           // Recovery parameter (0 or 1)
-        };
+        // Using secp.sign to sign the messageHash
+        const { signature: sig, recovery } = await secp256k1.sign(messageHash, privateKeyBuffer);
+        signature = sig;
         console.log("signature ->", signature);
+        console.log("recovery ->", recovery);
       } catch (err) {
         console.error("Error during signature generation:", err);
         return;
       }
+
+      // Extract the r, s, and recovery data from the signature
+      const r = signature.slice(0, 32);  // 32 bytes for r
+      const s = signature.slice(32, 64); // 32 bytes for s
+      const recoveryParam = recovery; // Recovery parameter
+
+      console.log("Signature data:", { r, s, recoveryParam });
 
       // Send the signed transaction
       const {
@@ -51,7 +55,11 @@ function Transfer({ address, setBalance, privateKey, setPrivateKey }) {
         sender: address,
         amount: parseInt(sendAmount, 10),
         recipient,
-        signature,
+        signature: {
+          r: toHex(r),
+          s: toHex(s),
+          recoveryParam,
+        },
       });
 
       setBalance(balance);
@@ -77,7 +85,7 @@ function Transfer({ address, setBalance, privateKey, setPrivateKey }) {
           placeholder="1, 2, 3..."
           value={sendAmount}
           onChange={setValue(setSendAmount)}
-        ></input>
+        />
       </label>
 
       <label>
@@ -86,7 +94,7 @@ function Transfer({ address, setBalance, privateKey, setPrivateKey }) {
           placeholder="Type an address, for example: 0x2"
           value={recipient}
           onChange={setValue(setRecipient)}
-        ></input>
+        />
       </label>
 
       <label>
@@ -96,7 +104,7 @@ function Transfer({ address, setBalance, privateKey, setPrivateKey }) {
           placeholder="Type in a Private Key"
           value={privateKey}
           onChange={(evt) => setPrivateKey(evt.target.value)}
-        ></input>
+        />
       </label>
 
       <input type="submit" className="button" value="Transfer" />
